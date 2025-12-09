@@ -1,0 +1,2927 @@
+﻿Maximum-speed VS Code + WSL + Codex setup (Plus-only)
+1) Run VS Code in WSL mode (fast filesystem + best Windows reliability)
+Install WSL (Ubuntu) if you haven’t:
+wsl --install -d Ubuntu
+1. Open Ubuntu, then in WSL:
+mkdir -p ~/code
+cd ~/code
+2. 3. From Windows VS Code, install the WSL extension, then use:
+   * Command Palette → “WSL: New Window”
+Clone your repo inside WSL (important for speed) and open it:
+cd ~/code
+git clone <repo-url>
+cd <repo>
+code .
+4. Keeping the project under ~/code/... (not /mnt/c/...) is the big “snappy builds” win.
+OpenAI explicitly recommends WSL for the best Windows experience and better sandboxing.
+2) Install Codex extension (no API)
+1. In the WSL VS Code window, install “Codex – OpenAI’s coding agent” from the Marketplace.
+2. Open the Codex panel → click Sign in with ChatGPT
+3. Log in in your browser — done. (No API key needed.)
+3) Force Codex to execute inside WSL (best reliability)
+In VS Code Settings (JSON), add:
+{
+  "chatgpt.runCodexInWindowsSubsystemForLinux": true
+}
+
+
+This is the recommended WSL setting.
+4) Make Codex feel fast (the 3 settings that matter)
+Open Codex Settings → config.toml (shared config file).
+Then set:
+* Model: use the Codex-optimised model in the extension model picker (often faster for agentic edits).
+* Reasoning effort: keep it low/medium for quick iteration; bump only when it’s stuck.
+* Approval mode: stay in Agent for speed; it can edit/run inside the repo without asking every time, and asks for anything outside/net by default.
+5) Fast dev loop (what you actually do while coding)
+In WSL terminal inside VS Code:
+* Terminal 1: npm/pnpm run dev
+* Terminal 2: npm/pnpm test --watch Then use Codex for tight tasks like:
+* “Add feature X + tests”
+* “Refactor system Y”
+* “Fix failing test Z”
+6) Optional speed boost: delegate big jobs to Codex Cloud
+For large refactors or “build me a whole subsystem”, use Run in the cloud (parallel work). You’ll set up a cloud environment via ChatGPT/Codex.
+If sign-in gets stuck in WSL (quick fixes)
+This does happen for some people due to localhost OAuth callback quirks in remote environments. Try, in order:
+1. Update Codex extension + reload VS Code
+2. Toggle "chatgpt.runCodexInWindowsSubsystemForLinux": true (then reload)
+Fallback: install the Codex CLI in WSL, sign in there with ChatGPT, then reopen VS Code:
+npm i -g @openai/codex
+codex
+3.  (CLI supports ChatGPT sign-in too.)
+If you tell me whether your roguelike is Phaser, Pixi, or Godot, I’ll give you the “copy/paste” WSL install commands + a repo template that Codex can extend insanely quickly.
+Yep — and it can feel cohesive instead of a messy “grab bag” if you wrap it in one strong spine:
+One epic game concept: The Wastes Courier: Curator of the Void
+You’re a courier/curator hauling cursed artefacts across a ruined world to rebuild a legendary Museum, and each “job” drops you into a different roguelike layer:
+The 3-layer game structure (this is what makes it work)
+1. Overworld (Courier of the Wastes)
+
+   * Procedural route map of towns + danger zones
+   * You pick contracts: deliver artefact, retrieve relic, escort cargo
+   * Resources: fuel, supplies, time/heat, reputation
+   2. Dungeons (the roguelike runs) Each node on the overworld can be one of these:
+
+      * Derelict Starship (Salvage): oxygen/time pressure, doors lock, systems reboot, escape pods as exits
+      * Wizard Tower (Spellcraft): rune rooms, spell-combo trials, arcane hazards
+      * Hive Nest (Summoner): swarm tactics, protect the “core,” evolve minions mid-run
+      3. Home Base (Museum of Curses)
+
+         * Your “stash” is the Museum vault
+         * Every artefact is boon + curse, and displaying them changes the world rules
+         * Meta progression = restoring wings of the Museum (unlocks new routes, vendors, starting loadouts)
+The glue that unifies everything
+1) Artefacts = your build
+         * Artefacts are the main loot everywhere.
+         * Each has:
+         * Boon (damage type, movement, summon buff, economy)
+         * Curse (map distortion, enemy mutators, inventory constraints, “reality events”)
+2) Runes = your spell system
+         * Runes drop mostly in the Tower, but also rare in ships/hives.
+         * You craft spells as: Form + Element + Modifier
+         * Form: bolt / beam / trap / aura / summon
+         * Element: fire / ice / void / shock / rot
+         * Modifier: chain / pierce / blink / leech / split
+3) Minions = drones/swarm (fits all biomes)
+         * In ships: they’re salvage drones
+         * In hives: they’re bio-minions
+         * In towers: they’re arcane constructs Mechanically it’s the same system, just reskinned per biome.
+Win condition that feels “multi-goal”
+You’re trying to complete a Grand Delivery: assemble a set of keystone artefacts and survive the final route to return them to the Museum. Each biome gives a different “keystone” and the curses stack, so by the end the run is chaotic in a fun way.
+MVP that’s actually buildable (so it doesn’t sprawl)
+Vertical slice (playable fast):
+         * Overworld map with 6 nodes
+         * 1 dungeon biome first (I’d start with Starship — strong tension)
+         * Artefact boon/curse system
+         * Basic rune spellcraft (even just 6 runes is enough)
+         * 2 minion types + simple commands (follow / hold / attack)
+Then you “swap in”:
+         * Tower rooms (rune-focused)
+         * Hive rooms (summon-focused)
+         * Museum base layer (display artefacts = global modifiers)
+If you tell Codex anything, tell it this: “Build one loop end-to-end before adding content.” That’s how you get an epic game that ships.
+Want it more like turn-based grid tactics (classic roguelike) or real-time action (Hades-ish)?
+I’d go turn-based grid tactics for the MVP — you’ll ship way faster, and it suits Codex really well.
+Why turn-based first (speed + sanity):
+         * Deterministic = easy to test (same inputs → same outcomes)
+         * You can focus on systems (loot/boons+curses, spells, minions, oxygen) without needing perfect feel/animation
+         * Less fiddly with collision, frame timing, hitboxes, and balance
+Then once the loop is fun, you can “upgrade” to real-time later (or add a toggle) without rewriting your whole content pipeline.
+Concrete next step: build the Starship biome as a grid tactics slice
+Core moment-to-moment loop
+         * Move 1 tile, act 1 time (attack / cast / command minion / interact)
+         * Oxygen ticks down per turn
+         * Doors can lock behind you (also per turn events)
+         * Exit = escape pod
+Recommended tech (fastest for VS Code + WSL)
+TypeScript + Vite + Phaser 3 (super quick iteration, web-playable instantly).
+Repo skeleton (what to tell Codex to generate)
+         * src/game/
+         * scenes/OverworldScene.ts
+         * scenes/RunScene.ts (Starship)
+         * systems/TurnSystem.ts
+         * systems/OxygenSystem.ts
+         * systems/LootSystem.ts
+         * content/artefacts.json runes.json enemies.json
+         * state/SaveGame.ts
+         * src/ui/ (simple HUD: oxygen, fuel, inventory, map)
+Codex task prompts (copy/paste)
+         1. “Scaffold Vite+TS+Phaser project with a basic scene switcher (Overworld → Run → Museum stub).”
+Yep — here’s a fully fleshed-out “Scaffold Vite + TypeScript + Phaser + 3 scenes + scene switcher” you (or Codex) can copy/paste and have running in minutes.
+Goal
+A clean starter where you can press keys or click buttons to switch between:
+         * OverworldScene → RunScene (Starship stub) → MuseumScene (stub)
+________________
+
+
+1) Create the Vite + TS project
+In WSL terminal (inside VS Code WSL window):
+mkdir -p ~/code
+cd ~/code
+npm create vite@latest wastes-courier -- --template vanilla-ts
+cd wastes-courier
+npm install
+
+
+2) Install Phaser
+npm install phaser
+
+
+3) Project structure (create these files)
+You’ll end up with:
+src/
+  main.ts
+  game/
+    SceneKeys.ts
+    createGame.ts
+    scenes/
+      OverworldScene.ts
+      RunScene.ts
+      MuseumScene.ts
+  style.css
+index.html
+
+
+Create the folders:
+mkdir -p src/game/scenes
+
+
+________________
+
+
+4) Add the code
+src/game/SceneKeys.ts
+export const SceneKeys = {
+  Overworld: "Overworld",
+  Run: "Run",
+  Museum: "Museum",
+} as const;
+
+
+export type SceneKey = (typeof SceneKeys)[keyof typeof SceneKeys];
+
+
+src/game/scenes/OverworldScene.ts
+import Phaser from "phaser";
+import { SceneKeys } from "../SceneKeys";
+
+
+export class OverworldScene extends Phaser.Scene {
+  constructor() {
+    super(SceneKeys.Overworld);
+  }
+
+
+  create() {
+    const { width, height } = this.scale;
+
+
+    this.add.text(20, 20, "OVERWORLD", { fontSize: "28px", color: "#ffffff" });
+    this.add.text(
+      20,
+      70,
+      [
+        "Click anywhere or press:",
+        "  [1] Start Run (Starship stub)",
+        "  [2] Go to Museum (stub)",
+      ].join("\n"),
+      { fontSize: "18px", color: "#dddddd" }
+    );
+
+
+    this.input.on("pointerdown", () => {
+      this.scene.start(SceneKeys.Run, { entry: "overworld" });
+    });
+
+
+    this.input.keyboard?.on("keydown-ONE", () => {
+      this.scene.start(SceneKeys.Run, { entry: "overworld" });
+    });
+
+
+    this.input.keyboard?.on("keydown-TWO", () => {
+      this.scene.start(SceneKeys.Museum, { entry: "overworld" });
+    });
+
+
+    // tiny visual marker
+    this.add.rectangle(width - 40, 40, 20, 20, 0x00ff99);
+  }
+}
+
+
+src/game/scenes/RunScene.ts
+import Phaser from "phaser";
+import { SceneKeys } from "../SceneKeys";
+
+
+type RunData = { entry?: string };
+
+
+export class RunScene extends Phaser.Scene {
+  constructor() {
+    super(SceneKeys.Run);
+  }
+
+
+  init(data: RunData) {
+    // You can store run seed / biome / contract details later
+    // For now we just show where we came from.
+    this.registry.set("runEntry", data.entry ?? "unknown");
+  }
+
+
+  create() {
+    const entry = this.registry.get("runEntry") as string;
+    const { width } = this.scale;
+
+
+    this.add.text(20, 20, "RUN: STARSHIP (STUB)", {
+      fontSize: "28px",
+      color: "#ffffff",
+    });
+
+
+    this.add.text(20, 70, `Entry: ${entry}`, {
+      fontSize: "18px",
+      color: "#dddddd",
+    });
+
+
+    this.add.text(
+      20,
+      110,
+      [
+        "Press:",
+        "  [O] Back to Overworld",
+        "  [M] Go to Museum",
+      ].join("\n"),
+      { fontSize: "18px", color: "#dddddd" }
+    );
+
+
+    // simple “room” placeholder
+    this.add.rectangle(width / 2, 260, 520, 260, 0x223344).setStrokeStyle(2, 0xffffff);
+
+
+    this.input.keyboard?.on("keydown-O", () => {
+      this.scene.start(SceneKeys.Overworld);
+    });
+
+
+    this.input.keyboard?.on("keydown-M", () => {
+      this.scene.start(SceneKeys.Museum, { entry: "run" });
+    });
+  }
+}
+
+
+src/game/scenes/MuseumScene.ts
+import Phaser from "phaser";
+import { SceneKeys } from "../SceneKeys";
+
+
+type MuseumData = { entry?: string };
+
+
+export class MuseumScene extends Phaser.Scene {
+  constructor() {
+    super(SceneKeys.Museum);
+  }
+
+
+  init(data: MuseumData) {
+    this.registry.set("museumEntry", data.entry ?? "unknown");
+  }
+
+
+  create() {
+    const entry = this.registry.get("museumEntry") as string;
+
+
+    this.add.text(20, 20, "MUSEUM (STUB)", {
+      fontSize: "28px",
+      color: "#ffffff",
+    });
+
+
+    this.add.text(20, 70, `Entry: ${entry}`, {
+      fontSize: "18px",
+      color: "#dddddd",
+    });
+
+
+    this.add.text(
+      20,
+      110,
+      [
+        "Press:",
+        "  [O] Back to Overworld",
+        "  [R] Go to Run",
+      ].join("\n"),
+      { fontSize: "18px", color: "#dddddd" }
+    );
+
+
+    this.input.keyboard?.on("keydown-O", () => {
+      this.scene.start(SceneKeys.Overworld);
+    });
+
+
+    this.input.keyboard?.on("keydown-R", () => {
+      this.scene.start(SceneKeys.Run, { entry: "museum" });
+    });
+  }
+}
+
+
+src/game/createGame.ts
+import Phaser from "phaser";
+import { OverworldScene } from "./scenes/OverworldScene";
+import { RunScene } from "./scenes/RunScene";
+import { MuseumScene } from "./scenes/MuseumScene";
+
+
+export function createGame(parent: string) {
+  const config: Phaser.Types.Core.GameConfig = {
+    type: Phaser.AUTO,
+    parent,
+    backgroundColor: "#0b0f14",
+    scene: [OverworldScene, RunScene, MuseumScene],
+    scale: {
+      mode: Phaser.Scale.FIT,
+      autoCenter: Phaser.Scale.CENTER_BOTH,
+      width: 960,
+      height: 540,
+    },
+    render: {
+      pixelArt: true,
+      antialias: false,
+    },
+  };
+
+
+  return new Phaser.Game(config);
+}
+
+
+src/main.ts
+Replace Vite’s default with:
+import "./style.css";
+import { createGame } from "./game/createGame";
+
+
+createGame("app");
+
+
+src/style.css
+html, body {
+  margin: 0;
+  height: 100%;
+  background: #0b0f14;
+}
+
+
+#app {
+  height: 100%;
+}
+
+
+index.html
+Make sure it contains:
+<div id="app"></div>
+
+
+(Vite’s template already does.)
+________________
+
+
+5) Run it
+npm run dev
+
+
+You should see the Overworld screen. Press 1 / 2, or click, to switch scenes.
+________________
+
+
+What this scaffold gives you (so future features are easy)
+         * Scene-based architecture: overworld, run, museum are separate “worlds”
+         * Clean place to pass data via scene.start(key, data)
+         * A foundation you can now extend into:
+         * overworld map generation
+         * starship grid + turn system
+         * museum inventory + global modifiers
+
+
+
+
+         2. “Implement a 20x12 grid with tile movement, blocking walls, and a turn queue.”
+Awesome — here’s a clean, working 20×12 grid + blocking walls + turn queue implementation for your existing scaffold. This replaces your RunScene with a playable “move one tile, then enemy moves” loop.
+1) Replace src/game/scenes/RunScene.ts with this
+import Phaser from "phaser";
+import { SceneKeys } from "../SceneKeys";
+
+
+type RunData = { entry?: string };
+
+
+type ActorKind = "player" | "enemy";
+type Actor = {
+  id: string;
+  kind: ActorKind;
+  x: number; // tile x
+  y: number; // tile y
+  rect: Phaser.GameObjects.Rectangle;
+};
+
+
+type Tile = 0 | 1; // 0 floor, 1 wall
+
+
+export class RunScene extends Phaser.Scene {
+  // Grid config
+  private readonly gridW = 20;
+  private readonly gridH = 12;
+  private readonly tileSize = 36;
+
+
+  // Rendering/layout
+  private originX = 0;
+  private originY = 0;
+  private gridGfx!: Phaser.GameObjects.Graphics;
+
+
+  // Map + actors
+  private tiles: Tile[] = [];
+  private actors: Actor[] = [];
+  private occupancy = new Map<string, string>(); // "x,y" -> actorId
+  private turnIndex = 0;
+  private phase: "PLAYER" | "AI_BUSY" = "PLAYER";
+
+
+  // UI
+  private turnText!: Phaser.GameObjects.Text;
+  private helpText!: Phaser.GameObjects.Text;
+
+
+  constructor() {
+    super(SceneKeys.Run);
+  }
+
+
+  init(data: RunData) {
+    this.registry.set("runEntry", data.entry ?? "unknown");
+  }
+
+
+  create() {
+    const entry = this.registry.get("runEntry") as string;
+
+
+    // Keep your scene switching keys
+    this.input.keyboard?.on("keydown-O", () => this.scene.start(SceneKeys.Overworld));
+    this.input.keyboard?.on("keydown-M", () => this.scene.start(SceneKeys.Museum, { entry: "run" }));
+
+
+    // Layout: centre grid with room for header text
+    const gridPxW = this.gridW * this.tileSize;
+    const gridPxH = this.gridH * this.tileSize;
+
+
+    this.originX = Math.floor((this.scale.width - gridPxW) / 2);
+    this.originY = Math.floor((this.scale.height - gridPxH) / 2) + 30;
+
+
+    this.add.text(20, 18, "RUN: STARSHIP (GRID MVP)", {
+      fontSize: "22px",
+      color: "#ffffff",
+    });
+
+
+    this.add.text(20, 44, `Entry: ${entry}`, {
+      fontSize: "14px",
+      color: "#bbbbbb",
+    });
+
+
+    this.turnText = this.add.text(20, 66, "", {
+      fontSize: "14px",
+      color: "#dddddd",
+    });
+
+
+    this.helpText = this.add.text(
+      20,
+      90,
+      [
+        "Move: Arrow keys / WASD",
+        "Wait: Space",
+        "Scene: [O] Overworld, [M] Museum",
+        "",
+        "Rule: you move 1 tile, then enemy moves 1 tile.",
+      ].join("\n"),
+      { fontSize: "14px", color: "#9fb0c0" }
+    );
+
+
+    // Build map + draw it once
+    this.generateMap();
+    this.gridGfx = this.add.graphics();
+    this.drawGrid();
+
+
+    // Spawn actors
+    this.spawnActors();
+
+
+    // Input: single-step movement on key press (not held)
+    this.input.keyboard?.on("keydown", (ev: KeyboardEvent) => {
+      if (this.phase !== "PLAYER") return;
+
+
+      const key = ev.key.toLowerCase();
+      const dir = this.keyToDir(key);
+      if (!dir) return;
+
+
+      const player = this.actors.find(a => a.kind === "player");
+      if (!player) return;
+
+
+      if (dir.type === "wait") {
+        this.endPlayerTurn();
+        return;
+      }
+
+
+      const moved = this.tryMove(player, dir.dx, dir.dy);
+      if (moved) this.endPlayerTurn();
+    });
+
+
+    // Start turn queue
+    this.turnIndex = 0;
+    this.phase = "PLAYER";
+    this.updateTurnText();
+  }
+
+
+  // ---------- Map ----------
+  private idx(x: number, y: number) {
+    return y * this.gridW + x;
+  }
+
+
+  private inside(x: number, y: number) {
+    return x >= 0 && y >= 0 && x < this.gridW && y < this.gridH;
+  }
+
+
+  private isWall(x: number, y: number) {
+    if (!this.inside(x, y)) return true;
+    return this.tiles[this.idx(x, y)] === 1;
+  }
+
+
+  private setTile(x: number, y: number, t: Tile) {
+    this.tiles[this.idx(x, y)] = t;
+  }
+
+
+  private generateMap() {
+    // Base floor
+    this.tiles = new Array(this.gridW * this.gridH).fill(0);
+
+
+    // Border walls
+    for (let x = 0; x < this.gridW; x++) {
+      this.setTile(x, 0, 1);
+      this.setTile(x, this.gridH - 1, 1);
+    }
+    for (let y = 0; y < this.gridH; y++) {
+      this.setTile(0, y, 1);
+      this.setTile(this.gridW - 1, y, 1);
+    }
+
+
+    // Random interior walls (light density)
+    const density = 0.12;
+    for (let y = 1; y < this.gridH - 1; y++) {
+      for (let x = 1; x < this.gridW - 1; x++) {
+        if (Math.random() < density) this.setTile(x, y, 1);
+      }
+    }
+
+
+    // Ensure spawn/paths aren’t blocked
+    this.setTile(1, 1, 0);
+    this.setTile(2, 1, 0);
+    this.setTile(1, 2, 0);
+
+
+    this.setTile(this.gridW - 2, this.gridH - 2, 0);
+    this.setTile(this.gridW - 3, this.gridH - 2, 0);
+    this.setTile(this.gridW - 2, this.gridH - 3, 0);
+  }
+
+
+  private drawGrid() {
+    this.gridGfx.clear();
+
+
+    const floorFill = 0x121a24;
+    const wallFill = 0x2a3340;
+    const stroke = 0x223044;
+
+
+    for (let y = 0; y < this.gridH; y++) {
+      for (let x = 0; x < this.gridW; x++) {
+        const wx = this.originX + x * this.tileSize;
+        const wy = this.originY + y * this.tileSize;
+
+
+        const isWall = this.tiles[this.idx(x, y)] === 1;
+        this.gridGfx.fillStyle(isWall ? wallFill : floorFill, 1);
+        this.gridGfx.fillRect(wx, wy, this.tileSize, this.tileSize);
+
+
+        this.gridGfx.lineStyle(1, stroke, 1);
+        this.gridGfx.strokeRect(wx, wy, this.tileSize, this.tileSize);
+      }
+    }
+  }
+
+
+  // ---------- Actors + Turn Queue ----------
+  private key(x: number, y: number) {
+    return `${x},${y}`;
+  }
+
+
+  private tileToWorldCenter(x: number, y: number) {
+    return {
+      x: this.originX + x * this.tileSize + this.tileSize / 2,
+      y: this.originY + y * this.tileSize + this.tileSize / 2,
+    };
+  }
+
+
+  private spawnActors() {
+    this.actors = [];
+    this.occupancy.clear();
+
+
+    const spawn = (id: string, kind: ActorKind, x: number, y: number, color: number) => {
+      const p = this.tileToWorldCenter(x, y);
+      const rect = this.add
+        .rectangle(p.x, p.y, this.tileSize * 0.72, this.tileSize * 0.72, color)
+        .setStrokeStyle(2, 0x0b0f14);
+
+
+      const actor: Actor = { id, kind, x, y, rect };
+      this.actors.push(actor);
+      this.occupancy.set(this.key(x, y), id);
+      return actor;
+    };
+
+
+    // Player at (1,1), enemy at opposite corner
+    spawn("player", "player", 1, 1, 0x52d6ff);
+    spawn("enemy-1", "enemy", this.gridW - 2, this.gridH - 2, 0xff5c7a);
+  }
+
+
+  private actorAt(x: number, y: number): Actor | undefined {
+    const id = this.occupancy.get(this.key(x, y));
+    if (!id) return undefined;
+    return this.actors.find(a => a.id === id);
+  }
+
+
+  private tryMove(actor: Actor, dx: number, dy: number) {
+    const nx = actor.x + dx;
+    const ny = actor.y + dy;
+
+
+    if (!this.inside(nx, ny)) return false;
+    if (this.isWall(nx, ny)) return false;
+
+
+    const occ = this.actorAt(nx, ny);
+    if (occ) return false; // later: attack/interact
+
+
+    // Update occupancy map
+    this.occupancy.delete(this.key(actor.x, actor.y));
+    actor.x = nx;
+    actor.y = ny;
+    this.occupancy.set(this.key(actor.x, actor.y), actor.id);
+
+
+    // Move visuals
+    const p = this.tileToWorldCenter(actor.x, actor.y);
+    actor.rect.setPosition(p.x, p.y);
+
+
+    return true;
+  }
+
+
+  private endPlayerTurn() {
+    // Advance to next actor
+    this.turnIndex = (this.turnIndex + 1) % this.actors.length;
+    this.updateTurnText();
+    this.beginCurrentTurn();
+  }
+
+
+  private beginCurrentTurn() {
+    const actor = this.actors[this.turnIndex];
+    if (!actor) return;
+
+
+    if (actor.kind === "player") {
+      this.phase = "PLAYER";
+      this.updateTurnText();
+      return;
+    }
+
+
+    // AI turn (single-step)
+    this.phase = "AI_BUSY";
+    this.updateTurnText();
+
+
+    this.time.delayedCall(120, () => {
+      this.aiAct(actor);
+
+
+      // End AI turn
+      this.turnIndex = (this.turnIndex + 1) % this.actors.length;
+      this.updateTurnText();
+
+
+      // Chain to next (player)
+      this.beginCurrentTurn();
+    });
+  }
+
+
+  private aiAct(enemy: Actor) {
+    const player = this.actors.find(a => a.kind === "player");
+    if (!player) return;
+
+
+    const dx = player.x - enemy.x;
+    const dy = player.y - enemy.y;
+
+
+    // Prefer larger axis; try alternate if blocked
+    const stepX = Math.sign(dx);
+    const stepY = Math.sign(dy);
+
+
+    const preferX = Math.abs(dx) >= Math.abs(dy);
+
+
+    const attempts: Array<[number, number]> = preferX
+      ? [[stepX, 0], [0, stepY]]
+      : [[0, stepY], [stepX, 0]];
+
+
+    // If both are zero (same tile, shouldn’t happen), do nothing.
+    for (const [ax, ay] of attempts) {
+      if (ax === 0 && ay === 0) continue;
+      if (this.tryMove(enemy, ax, ay)) return;
+    }
+    // If blocked, enemy waits.
+  }
+
+
+  private updateTurnText() {
+    const actor = this.actors[this.turnIndex];
+    const who = actor ? `${actor.kind.toUpperCase()} (${actor.id})` : "—";
+    this.turnText.setText(`Turn: ${who}  |  Phase: ${this.phase}`);
+  }
+
+
+  // ---------- Input helpers ----------
+  private keyToDir(key: string):
+    | { type: "move"; dx: number; dy: number }
+    | { type: "wait" }
+    | null {
+    if (key === " " || key === "space") return { type: "wait" };
+
+
+    if (key === "arrowup" || key === "w") return { type: "move", dx: 0, dy: -1 };
+    if (key === "arrowdown" || key === "s") return { type: "move", dx: 0, dy: 1 };
+    if (key === "arrowleft" || key === "a") return { type: "move", dx: -1, dy: 0 };
+    if (key === "arrowright" || key === "d") return { type: "move", dx: 1, dy: 0 };
+
+
+    return null;
+  }
+}
+
+
+2) Run it
+npm run dev
+
+
+You should now be able to:
+         * Move 1 tile per keypress (Arrow keys / WASD)
+         * Walls block movement
+         * Enemy takes a turn after you (simple chase AI)
+         * Space to “wait”
+         * O back to Overworld, M to Museum
+________________
+
+
+Next “MVP upgrade” (I can write it straight in)
+Pick one and I’ll add it cleanly:
+         1. Attacking when you bump an enemy (instead of blocking)
+         2. Oxygen system ticking down each turn + damage at 0
+         3. Door tiles (open/closed/locked) + auto-lock events
+
+
+
+
+         3. “Add OxygenSystem: oxygen decreases each turn; at 0 start taking HP damage.”
+         4. “Add Doors: doors can be open/closed/locked; stepping through can auto-lock behind you.”
+         5. “Add Artefacts: JSON-driven boon+curse; apply effects immediately; show in HUD.”
+         6. “Add Runes: build spell from Form+Element+Modifier; implement 6 runes total.”
+         7. “Add 2 minions with commands follow/hold/attack; basic AI on enemy turn.”
+If you want, I’ll pick exactly 6 starter artefacts + 6 starter runes that make fun combos and showcase the curse mechanic on day one.
+This looks like a solid foundation for your roguelike project! Here's my assessment and some suggestions:
+
+
+## What's Working Well
+
+
+**Your layered approach is excellent:**
+- Overworld (courier map) → Dungeon runs → Museum base creates natural progression hooks
+- The "artefacts as boon + curse" is a strong unifying mechanic across all biomes
+- Starting with turn-based grid tactics is the right call for MVP speed
+
+
+**The tech stack is appropriate:**
+- WSL + VS Code + Codex setup will give you fast iteration
+- Vite + TypeScript + Phaser 3 is a proven combo for roguelikes
+- The scene-based architecture in your scaffold is clean
+
+
+## Suggestions to Make This Even Better
+
+
+### 1. **Scope the MVP tighter initially**
+Your full vision (3 biomes, rune system, minions, museum meta) is great for the final game, but I'd recommend an even smaller first playable slice:
+
+
+**Week 1 target:** One complete run loop
+- Single Starship level (fixed or simple procgen)
+- Player movement + 2-3 enemy types
+- 3-4 artefacts with simple boon/curse pairs
+- Win condition: reach exit pod
+- Lose condition: oxygen = 0 or HP = 0
+
+
+Once that *feels fun*, add the second layer.
+
+
+### 2. **Consider these implementation priorities**
+
+
+Based on your code so far, build in this order:
+
+
+```
+✅ Grid + movement + walls (you're here)
+→ Combat system (simple attack/damage)
+→ Oxygen/turn pressure system
+→ 3-4 artefacts with visible effects
+→ Simple enemy AI (chase player, basic pathing)
+→ Death/victory screens
+→ Procgen rooms (simple)
+→ THEN: Overworld stub → Museum stub → second biome
+```
+
+
+### 3. **Watch out for these common pitfalls**
+
+
+- **Don't build all content systems before proving the core loop is fun.** Get one enemy, one artefact, one room feeling good first.
+- **Procgen can eat weeks.** Start with handcrafted rooms/layouts, add procgen later.
+- **The rune spell system is complex.** Consider deferring it until after your first biome is polished—or simplify it to "find scrolls with premade spells" initially.
+
+
+### 4. **Codex-specific workflow tips**
+
+
+Your setup instructions are good, but add these practices:
+
+
+**Break tasks into tiny chunks for Codex:**
+- ✅ "Add a simple melee attack: player presses X, damages adjacent enemy"
+- ❌ "Implement the complete combat system"
+
+
+**Test immediately after each Codex change:**
+- Run the game after every feature
+- Catch bugs while context is fresh
+- Codex is much better at fixing bugs when you give it immediate error messages
+
+
+**Use Codex for boilerplate, you for design:**
+- Let Codex scaffold systems, generate content files, write utility functions
+- You make the creative decisions (artefact effects, enemy behaviors, balance)
+
+
+### 5. **One specific code suggestion**
+
+
+In your `RunScene.ts` (which got cut off), I'd recommend extracting systems into separate classes early:
+
+
+```typescript
+// src/game/systems/
+TurnSystem.ts      // manages turn queue, who acts when
+GridSystem.ts      // pathfinding, tile queries, blocking
+CombatSystem.ts    // damage, death, attack resolution
+OxygenSystem.ts    // pressure mechanic
+```
+
+
+This keeps your scene clean and makes each system easy to iterate on with Codex.
+
+
+## Bottom Line
+
+
+**Yes, this is a great way to approach the project** — but consider starting even smaller than your current MVP. Get one single Starship run feeling tense and fun before adding the overworld layer. The "courier delivering cursed artefacts" framing is strong enough that players will understand it even if you launch with just the dungeon runs first.
+
+
+Your biggest risk is scope creep (3 biomes, rune combos, minions, museum meta). Ship the core loop first, then expand.
+
+
+Want me to write you a specific "Week 1 milestone checklist" based on your current code, or help you design the combat/oxygen systems for the Starship biome?
+
+
+
+
+
+
+
+
+
+
+This is a **very solid Week 1 plan** — realistic scope, smart build order, and good Codex integration. Here's detailed specific feedback:
+
+
+---
+
+
+## ✅ What's Excellent
+
+
+### **1. The daily progression is well-structured**
+You're building **vertically** (completing one system before adding another) rather than horizontally (half-finishing everything). This is exactly right for solo dev + AI assistant workflow.
+
+
+### **2. Day order is nearly optimal**
+The dependency chain makes sense:
+- Core loop → Combat → Pressure → Variety → Rewards → Win/Lose
+
+
+### **3. Codex micro-prompts are well-scoped**
+These are *actually* micro — small enough that Codex won't go rogue, specific enough to avoid ambiguity.
+
+
+### **4. The "Definition of Done" is clear**
+Having explicit win/lose conditions + restart by Day 6 means you'll have a real playable loop, not just "tech demos."
+
+
+---
+
+
+## 🔧 Specific Improvements
+
+
+### **Day 1 — Add one more critical item**
+
+
+Your current Day 1:
+- ✅ Turn queue
+- ✅ HUD
+- ✅ Seed
+
+
+**Add:**
+```
+[ ] Player can restart the run (R key or button)
+```
+
+
+**Why:** You'll be testing dozens of times per day. Having to reload the page is friction that compounds. This is a 5-minute task that saves hours.
+
+
+**Codex prompt:**
+```
+"Add restart functionality: press R to regenerate map with new seed and reset all state."
+```
+
+
+---
+
+
+### **Day 2 — Clarify death feedback**
+
+
+Your current:
+```
+[ ] On death: remove enemy + clear occupancy
+```
+
+
+**Improve to:**
+```
+[ ] On death: flash/tint actor, wait 200ms, THEN remove + clear occupancy
+[ ] Add floating damage numbers (optional but high impact)
+```
+
+
+**Why:** Instant removal feels glitchy. A tiny delay makes combat "feel" way better. Damage numbers are cheap (Phaser has this built-in) and make testing way easier.
+
+
+**Codex prompt:**
+```
+"On actor death: tint red, scale down over 200ms, then destroy. Show floating damage text on hit."
+```
+
+
+---
+
+
+### **Day 3 — Oxygen design decision needs clarification**
+
+
+Your current:
+```
+[ ] Oxygen decreases every full round (or every player turn — pick one and stick to it)
+```
+
+
+**My recommendation: Pick NOW, not during implementation.**
+
+
+**Best choice for MVP: Every player turn.**
+
+
+**Why:**
+- Simpler (no "round" tracking needed)
+- Easier to balance (you control the rate directly)
+- Creates more tension (you feel pressure *every* action)
+
+
+**Update task to:**
+```
+[ ] Oxygen decreases by 1 every player turn (including "wait")
+[ ] At oxygen ≤ 0: player takes 1 damage per turn
+[ ] Display oxygen as a bar + number in HUD
+```
+
+
+**Codex prompt:**
+```
+"Decrement oxygen by 1 in endPlayerTurn(). When oxygen ≤ 0, apply 1 damage to player. Add oxygen bar to HUD."
+```
+
+
+---
+
+
+### **Day 4 — Enemy variety needs one constraint**
+
+
+Your current enemy types are good, but **add spawn limits**:
+
+
+```
+[ ] Chaser (moves toward you) — max 2 per level
+[ ] Drifter (random-ish) — 2-4 per level
+[ ] Sentry (moves only if you're within 5 tiles) — 1-2 per level
+```
+
+
+**Why:** Without caps, random spawns can create unwinnable starts. Codex won't know to add this unless you specify.
+
+
+**Also add:**
+```
+[ ] Enemies spawn at least 6 tiles from player start
+```
+
+
+**Codex prompt:**
+```
+"Spawn 3-6 enemies with type weights (40% chaser, 40% drift, 20% sentry), at least 6 tiles from player, max 2 chasers."
+```
+
+
+---
+
+
+### **Day 5 — Artefact implementation needs phasing**
+
+
+Your artefacts are creative but some are **much** harder to implement than others:
+
+
+**Easy (do these first):**
+- ✅ +1 ATK | -2 Oxygen/turn
+- ✅ +20 Max HP | Skip every 3rd turn
+
+
+**Medium (do second):**
+- ⚠️ Dash once per turn | Walls grow
+
+
+**Hard (defer to Week 2):**
+- ❌ Summon drone | Enemies get drones
+
+
+**Revised Day 5:**
+```
+[ ] Implement artefact pickup system (step on tile → add to inventory)
+[ ] Add 2 SIMPLE artefacts (stat modifiers only)
+[ ] Test that curses actually trigger
+[ ] (Stretch) Add 1 ability artefact (dash OR skip-turn, not both)
+```
+
+
+**Day 6 becomes:**
+```
+[ ] Add 1-2 more artefacts (can reuse boon/curse combos with different values)
+[ ] Escape pod + victory
+```
+
+
+**Why:** Drones are a whole subsystem. Getting 2 working artefacts is better than 4 half-broken ones.
+
+
+**Codex prompt (start simple):**
+```
+"Add artefact pickup: stepping on artefact tile adds it to player inventory array and applies stat modifiers immediately."
+```
+
+
+---
+
+
+### **Day 6 — Victory screen needs one key feature**
+
+
+Your current:
+```
+[ ] Simple result scene with Restart button
+```
+
+
+**Add:**
+```
+[ ] Victory screen shows: Turns taken, Enemies killed, Artefacts collected, Oxygen remaining
+[ ] "Play Again" button uses SAME seed (for testing)
+[ ] "New Run" button uses NEW seed
+```
+
+
+**Why:** 
+- Stats make victory feel earned
+- Same-seed replay is critical for testing balance
+- You need both buttons eventually, adding them now costs 2 minutes
+
+
+**Codex prompt:**
+```
+"Create VictoryScene showing run stats (turns, kills, artefacts, oxygen). Add 'Replay' (same seed) and 'New Run' buttons."
+```
+
+
+---
+
+
+### **Day 7 — Handcrafted layouts are HIGH PRIORITY**
+
+
+Your current:
+```
+[ ] "Room" layout that isn't random garbage (handcrafted for now)
+```
+
+
+**This should be Day 6 or even Day 5.** Random walls will make testing miserable because:
+- You can't reproduce bugs
+- Balance is impossible to tune
+- Runs feel swingy (sometimes trivial, sometimes impossible)
+
+
+**Better plan:**
+```
+Day 5 (before artefacts):
+[ ] Create 3-5 handcrafted room layouts in JSON
+[ ] Select room based on seed % numRooms
+
+
+Day 7 (polish):
+[ ] Hit feedback, tints, camera shake
+```
+
+
+**Codex prompt:**
+```
+"Create 3 handcrafted 20x12 room layouts as 2D arrays in content/rooms.json. Load and place based on seed."
+```
+
+
+**Example room JSON:**
+```json
+{
+  "rooms": [
+    {
+      "id": "corridor",
+      "layout": "...011110..." 
+    }
+  ]
+}
+```
+
+
+---
+
+
+### **Architecture Split — Do This on Day 2, Not Later**
+
+
+Your current:
+```
+Before things sprawl, split RunScene...
+```
+
+
+**Move this earlier:**
+
+
+```
+Day 2 (after combat):
+[ ] Extract GridSystem, TurnSystem, CombatSystem
+[ ] Keep OxygenSystem in RunScene for now
+```
+
+
+**Why:**
+- Once you have 3+ systems, refactoring becomes painful
+- Doing it early keeps Codex edits isolated (it won't accidentally break turn logic when editing combat)
+- You'll thank yourself by Day 4
+
+
+**Codex prompt:**
+```
+"Refactor: extract turn queue logic into TurnSystem class, grid/occupancy into GridSystem, combat into CombatSystem. RunScene orchestrates."
+```
+
+
+---
+
+
+## 📋 Revised Week 1 Checklist
+
+
+### **Day 1 — Core Loop**
+- [ ] Turn queue stable (player → enemies → player)
+- [ ] HUD: HP, Oxygen, Turn count
+- [ ] Seeded RNG shown on screen
+- [ ] **Press R to restart run with new seed**
+
+
+### **Day 2 — Combat + Refactor**
+- [ ] Bump-to-attack (try to move into enemy → deal damage)
+- [ ] Actor stats (hp, maxHp, atk)
+- [ ] Death: tint/flash, then remove cleanly
+- [ ] **Floating damage numbers**
+- [ ] **Extract GridSystem, TurnSystem, CombatSystem**
+
+
+### **Day 3 — Oxygen Pressure**
+- [ ] Oxygen decreases 1 per player turn (including wait)
+- [ ] At oxygen ≤ 0: deal 1 damage/turn to player
+- [ ] Add oxygen bar to HUD
+- [ ] Add 1-2 oxygen canister pickups (+10 oxygen)
+
+
+### **Day 4 — Enemy Variety**
+- [ ] Add Chaser AI (moves toward player)
+- [ ] Add Drifter AI (random movement)
+- [ ] Add Sentry AI (moves if player within 5 tiles)
+- [ ] Spawn 3-6 enemies, at least 6 tiles from player
+- [ ] **Spawn limits: max 2 chasers, 2-4 drifters, 1-2 sentries**
+
+
+### **Day 5 — Handcrafted Rooms + Simple Artefacts**
+- [ ] **Create 3-5 handcrafted room layouts in JSON**
+- [ ] **Load room based on seed**
+- [ ] Add artefact pickup system
+- [ ] Add 2 simple artefacts (stat modifiers + simple curses)
+- [ ] Test curses trigger correctly
+
+
+### **Day 6 — Win/Lose + More Artefacts**
+- [ ] Place escape pod tile (step on it → victory)
+- [ ] Victory screen: stats (turns, kills, artefacts, oxygen)
+- [ ] **"Replay" (same seed) + "New Run" buttons**
+- [ ] Defeat screen (HP or oxygen = 0)
+- [ ] Add 1-2 more artefacts (can reuse mechanics)
+
+
+### **Day 7 — Polish + (Stretch) Ability Artefact**
+- [ ] Hit feedback: screen shake, tint flash
+- [ ] Death animation improvements
+- [ ] **(Stretch) Add 1 ability artefact (dash OR turn-skip)**
+- [ ] Playtest 5-10 full runs, note balance issues
+
+
+---
+
+
+## 🎯 Bottom Line
+
+
+Your plan is **95% there**. The changes I'm suggesting:
+
+
+1. **Do restart earlier** (Day 1) — saves you hours of friction
+2. **Pick oxygen system now** (every player turn) — avoid mid-implementation design paralysis  
+3. **Handcrafted rooms by Day 5** — makes everything else testable
+4. **Refactor by Day 2** — prevents code rot
+5. **Defer complex artefacts** (drones) — get 4 simple ones working first
+6. **Add spawn constraints** — prevents unwinnable RNG
+7. **Same-seed replay button** — essential for testing
+
+
+With these tweaks, you'll have a **genuinely fun, polished mini-roguelike** by Sunday that you can show people and get real feedback on.
+
+
+**Want me to write the exact file structure + starter code for the systems refactor (Day 2), or help you design the 3-5 handcrafted room layouts?**
+
+
+
+
+You’re very close to peak improvements for a Week 1 plan. At this point, the biggest gains aren’t “more items” — they’re locking decisions, reducing churn, and making testing effortless.
+That said, there are 3 small upgrades that still add real value without bloating scope, and 2 things to avoid that look good on paper but slow you down.
+The last meaningful improvements (worth doing)
+1) Add a “golden path” test harness (tiny, huge payoff)
+Goal: You can reproduce bugs instantly.
+         * Fixed seed button/keypress (e.g. F) → always loads the same room + spawns
+         * “Quick win” seed and “Quick loss” seed
+This saves more time than almost anything else because every bug becomes repeatable.
+2) Define exact numbers now (so you don’t rebalance endlessly)
+Pick constants and keep them for Week 1:
+         * Grid: 20×12
+         * Player: HP 12, ATK 3
+         * Enemy: HP 6, ATK 2
+         * Oxygen start: 30
+         * Oxygen tick: -1 per player turn
+         * O2 canister: +10
+         * Enemy count: 4 (cap) for Week 1
+This is the difference between “we shipped” and “we tuned forever”.
+3) Add 1 simple “telegraph” UI element
+Not fancy—just clarity:
+         * Highlight the player’s turn (outline glow)
+         * Show “Press R to restart / F fixed seed” in HUD
+It lowers mental load and makes playtests smoother.
+Two things you should not add in Week 1
+A) Pathfinding (A*)
+Your current “try step on major axis then alternate” AI is perfect for Week 1. Pathfinding is a time sink and makes bugs harder to reason about.
+B) Procgen beyond “pick from handcrafted rooms”
+Handcrafted rooms chosen by seed is the sweet spot for Week 1. True procgen can wait.
+So… are we at peak?
+Pretty much. Your revised plan is at the point where extra “improvements” are mostly disguised scope creep.
+If you implement the plan exactly as written + the test harness + locked constants, you’re in the best possible Week 1 shape.
+If you want one final “Week 1 contract” (super short)
+         * One scene, one biome, one loop
+         * Restart + fixed seed
+         * Oxygen every player turn
+         * 4 artefacts, simple only
+         * 3–5 handcrafted rooms
+         * Victory/Defeat + stats + replay seed
+If you want, I can turn this into a single constants.ts + RunConfig file structure so Codex can’t accidentally drift numbers all over the codebase.
+# First Codex Prompt (Day 1, Task 1)
+
+
+Copy-paste this into Codex exactly as written:
+
+
+---
+
+
+**Task: Day 1 Setup — Constants, Restart, HUD, Seeded RNG**
+
+
+Create a complete Day 1 foundation for the roguelike with these exact specifications:
+
+
+## 1) Create `src/game/constants.ts`
+
+
+```typescript
+export const GameConstants = {
+  // Grid
+  GRID_WIDTH: 20,
+  GRID_HEIGHT: 12,
+  TILE_SIZE: 36,
+
+
+  // Player stats
+  PLAYER_HP: 12,
+  PLAYER_ATK: 3,
+
+
+  // Enemy stats
+  ENEMY_HP: 6,
+  ENEMY_ATK: 2,
+  ENEMY_COUNT: 4,
+
+
+  // Oxygen system
+  OXYGEN_START: 30,
+  OXYGEN_TICK: -1, // per player turn
+  OXYGEN_CANISTER: 10,
+
+
+  // Seeds
+  FIXED_SEED_WIN: 12345,
+  FIXED_SEED_LOSS: 67890,
+} as const;
+```
+
+
+## 2) Create `src/game/utils/SeededRNG.ts`
+
+
+```typescript
+export class SeededRNG {
+  private seed: number;
+
+
+  constructor(seed: number) {
+    this.seed = seed;
+  }
+
+
+  // Linear congruential generator
+  next(): number {
+    this.seed = (this.seed * 1664525 + 1013904223) % 4294967296;
+    return this.seed / 4294967296;
+  }
+
+
+  nextInt(min: number, max: number): number {
+    return Math.floor(this.next() * (max - min + 1)) + min;
+  }
+
+
+  nextFloat(min: number, max: number): number {
+    return this.next() * (max - min) + min;
+  }
+
+
+  choice<T>(array: T[]): T {
+    return array[this.nextInt(0, array.length - 1)];
+  }
+
+
+  getSeed(): number {
+    return this.seed;
+  }
+}
+```
+
+
+## 3) Update `src/game/scenes/RunScene.ts`
+
+
+Add these features to the existing RunScene:
+
+
+### Properties to add:
+```typescript
+private seed!: number;
+private rng!: SeededRNG;
+
+
+// HUD elements
+private hpText!: Phaser.GameObjects.Text;
+private oxygenText!: Phaser.GameObjects.Text;
+private turnCountText!: Phaser.GameObjects.Text;
+private seedText!: Phaser.GameObjects.Text;
+private helpText!: Phaser.GameObjects.Text;
+
+
+// Game state
+private playerHp: number = GameConstants.PLAYER_HP;
+private oxygen: number = GameConstants.OXYGEN_START;
+private turnCount: number = 0;
+```
+
+
+### In `init(data)`:
+```typescript
+init(data: RunData) {
+  this.registry.set("runEntry", data.entry ?? "unknown");
+  
+  // Initialize seed (from data, or generate new)
+  this.seed = (data as any).seed ?? Date.now();
+  this.rng = new SeededRNG(this.seed);
+  
+  // Reset game state
+  this.playerHp = GameConstants.PLAYER_HP;
+  this.oxygen = GameConstants.OXYGEN_START;
+  this.turnCount = 0;
+}
+```
+
+
+### In `create()`, add HUD at the top:
+```typescript
+// HUD - positioned top-left, compact layout
+const hudX = 20;
+let hudY = 18;
+
+
+this.add.text(hudX, hudY, "STARSHIP RUN", {
+  fontSize: "20px",
+  color: "#ffffff",
+  fontStyle: "bold"
+});
+hudY += 28;
+
+
+this.hpText = this.add.text(hudX, hudY, "", {
+  fontSize: "16px",
+  color: "#ff6b6b"
+});
+hudY += 22;
+
+
+this.oxygenText = this.add.text(hudX, hudY, "", {
+  fontSize: "16px",
+  color: "#4dabf7"
+});
+hudY += 22;
+
+
+this.turnCountText = this.add.text(hudX, hudY, "", {
+  fontSize: "16px",
+  color: "#aaaaaa"
+});
+hudY += 22;
+
+
+this.seedText = this.add.text(hudX, hudY, "", {
+  fontSize: "14px",
+  color: "#666666"
+});
+hudY += 30;
+
+
+this.helpText = this.add.text(hudX, hudY, [
+  "Move: Arrow/WASD",
+  "Wait: SPACE",
+  "Restart: R (new seed)",
+  "Test: F (fixed seed)",
+  "",
+  "[O] Overworld  [M] Museum"
+].join("\n"), {
+  fontSize: "13px",
+  color: "#7d8590"
+});
+
+
+this.updateHUD();
+```
+
+
+### Add keyboard handlers in `create()`:
+```typescript
+// Restart with new seed
+this.input.keyboard?.on("keydown-R", () => {
+  this.scene.restart({ seed: Date.now() });
+});
+
+
+// Fixed seed (for testing)
+this.input.keyboard?.on("keydown-F", () => {
+  this.scene.restart({ seed: GameConstants.FIXED_SEED_WIN });
+});
+```
+
+
+### Add HUD update method:
+```typescript
+private updateHUD() {
+  this.hpText.setText(`HP: ${this.playerHp}/${GameConstants.PLAYER_HP}`);
+  this.oxygenText.setText(`O₂: ${this.oxygen}/${GameConstants.OXYGEN_START}`);
+  this.turnCountText.setText(`Turn: ${this.turnCount}`);
+  this.seedText.setText(`Seed: ${this.seed}`);
+}
+```
+
+
+### Update `endPlayerTurn()` to increment turn counter:
+```typescript
+private endPlayerTurn() {
+  this.turnCount++;
+  this.updateHUD();
+  
+  // Advance to next actor
+  this.turnIndex = (this.turnIndex + 1) % this.actors.length;
+  this.updateTurnText();
+  this.beginCurrentTurn();
+}
+```
+
+
+## 4) Import constants in RunScene
+
+
+At the top of `RunScene.ts`:
+```typescript
+import { GameConstants } from "../constants";
+import { SeededRNG } from "../utils/SeededRNG";
+```
+
+
+## 5) Update grid size references
+
+
+Replace hardcoded values:
+- `this.gridW = 20` → `this.gridW = GameConstants.GRID_WIDTH`
+- `this.gridH = 12` → `this.gridH = GameConstants.GRID_HEIGHT`
+- `this.tileSize = 36` → `this.tileSize = GameConstants.TILE_SIZE`
+
+
+## Success criteria:
+- Press R: run restarts with new seed shown in HUD
+- Press F: run restarts with seed 12345 (always same layout)
+- HUD shows HP, O₂, Turn count, Seed
+- Turn counter increments each player action
+- Game uses SeededRNG instead of Math.random (for future procgen)
+
+
+Test by pressing R multiple times—seed should change. Press F—seed should always be 12345.
+
+
+---
+
+
+**Why this prompt works well:**
+
+
+1. **Extremely specific** — no ambiguity about what to create
+2. **Complete code blocks** — Codex can copy-paste, not invent
+3. **Clear success criteria** — you know when it's done
+4. **Builds on existing code** — references your current RunScene structure
+5. **Locked constants** — prevents number drift across future tasks
+
+
+After Codex completes this, test it, then move to Day 1 Task 2 (which I can write next if you want).
+
+
+
+
+
+
+
+
+Codex Prompt 2 (Day 1, Task 2)
+ Copy-paste this into Codex exactly as written:
+________________
+
+
+Task: Day 1 Setup — Deterministic Map + Handcrafted Rooms (seeded), no more Math.random walls
+You already added GameConstants + SeededRNG + restart/HUD in Prompt 1. Now make the RunScene map deterministic and testable by loading a handcrafted room layout chosen by seed.
+1) Create src/game/content/rooms.ts
+Implement 3 handcrafted 20×12 rooms as string arrays, where:
+         * # = wall
+         * . = floor
+         * P = player spawn (exactly one)
+         * E = escape pod (exactly one)
+         * X = enemy spawn marker (multiple allowed; you will spawn up to ENEMY_COUNT from these)
+         * O = oxygen canister marker (multiple allowed)
+Important: Keep borders mostly walls so the level is enclosed.
+export type RoomTileChar = "#" | "." | "P" | "E" | "X" | "O";
+
+
+export type RoomDef = {
+  id: string;
+  layout: string[]; // length 12, each string length 20
+};
+
+
+export const Rooms: RoomDef[] = [
+  {
+    id: "corridor_run",
+    layout: [
+      "####################",
+      "#P..#......#....O..#",
+      "#..##.####.#.####..#",
+      "#......#...#....#..#",
+      "####.#.#.#####..#..#",
+      "#....#.#.....#..#..#",
+      "#.####.#####.#.##..#",
+      "#..X...#...#.#.....#",
+      "#..####.#.#.#####..#",
+      "#..O....#.#....X...#",
+      "#......X..#......E.#",
+      "####################",
+    ],
+  },
+  {
+    id: "engine_room",
+    layout: [
+      "####################",
+      "#P....#..O..#......#",
+      "#.#######.###.####.#",
+      "#.....X...#...#....#",
+      "###.#####.#.###.##.#",
+      "#...#.....#.....#..#",
+      "#.###.#########.##.#",
+      "#...#.....X.....#..#",
+      "#.##.#########.###.#",
+      "#..#....O..#....#..#",
+      "#..X.......#....E..#",
+      "####################",
+    ],
+  },
+  {
+    id: "cargo_bay",
+    layout: [
+      "####################",
+      "#P....O......#.....#",
+      "#.##########.#.###.#",
+      "#....X.......#...#.#",
+      "###.######.####.#..#",
+      "#...#....#......#..#",
+      "#.###.##.#########.#",
+      "#.....##.....X.....#",
+      "#.##########.#######",
+      "#.....O......#.....#",
+      "#..X.........#...E.#",
+      "####################",
+    ],
+  },
+];
+
+
+2) Update RunScene.ts to use Rooms instead of random interior walls
+A) Remove the existing generateMap() random wall logic.
+We no longer want density/random walls at all for Day 1.
+B) Add imports at top:
+import { Rooms, RoomTileChar } from "../content/rooms";
+import { GameConstants } from "../constants";
+
+
+C) Add these fields to RunScene:
+private exitPos!: { x: number; y: number };
+private oxygenPickups = new Set<string>(); // tile keys that contain O2 canisters
+
+
+D) Implement a loadRoomFromSeed() method
+Rules:
+         * Choose room index deterministically: seed % Rooms.length
+         * Parse the layout into:
+         * this.tiles (0 floor / 1 wall)
+         * player spawn position
+         * exit position
+         * oxygen pickup positions
+         * enemy spawn markers list
+         * Clear any markers (P,E,X,O) to floor in the tile map after you record them
+         * Sanity checks:
+         * layout size matches constants (20×12)
+         * exactly one P and one E
+private loadRoomFromSeed() {
+  const roomIndex = Math.abs(this.seed) % Rooms.length;
+  const room = Rooms[roomIndex];
+
+
+  if (room.layout.length !== GameConstants.GRID_HEIGHT) {
+    throw new Error(`Room ${room.id} height mismatch`);
+  }
+
+
+  this.tiles = new Array(GameConstants.GRID_WIDTH * GameConstants.GRID_HEIGHT).fill(0);
+  this.oxygenPickups.clear();
+
+
+  let playerSpawn: { x: number; y: number } | null = null;
+  let exitSpawn: { x: number; y: number } | null = null;
+  const enemySpawns: Array<{ x: number; y: number }> = [];
+
+
+  for (let y = 0; y < GameConstants.GRID_HEIGHT; y++) {
+    const row = room.layout[y];
+    if (row.length !== GameConstants.GRID_WIDTH) {
+      throw new Error(`Room ${room.id} row ${y} width mismatch`);
+    }
+
+
+    for (let x = 0; x < GameConstants.GRID_WIDTH; x++) {
+      const ch = row[x] as RoomTileChar;
+
+
+      if (ch === "#") {
+        this.tiles[this.idx(x, y)] = 1;
+        continue;
+      }
+
+
+      // everything else is floor
+      this.tiles[this.idx(x, y)] = 0;
+
+
+      if (ch === "P") playerSpawn = { x, y };
+      if (ch === "E") exitSpawn = { x, y };
+      if (ch === "X") enemySpawns.push({ x, y });
+      if (ch === "O") this.oxygenPickups.add(this.key(x, y));
+    }
+  }
+
+
+  if (!playerSpawn) throw new Error(`Room ${room.id} missing player spawn P`);
+  if (!exitSpawn) throw new Error(`Room ${room.id} missing exit E`);
+
+
+  this.exitPos = exitSpawn;
+
+
+  return { roomId: room.id, playerSpawn, enemySpawns };
+}
+
+
+E) In create(), use loadRoomFromSeed() before drawing grid and spawning actors
+Replace the old call order with:
+         1. const { roomId, playerSpawn, enemySpawns } = this.loadRoomFromSeed();
+         2. draw grid
+         3. spawn player at playerSpawn
+         4. spawn enemies using enemySpawns markers, up to ENEMY_COUNT
+Also show room id in HUD help text or in a small label:
+this.add.text(20, 520, `Room: ${roomId}`, { fontSize: "12px", color: "#666" });
+
+
+F) Update spawnActors() so it can accept spawn positions
+Change signature:
+private spawnActors(playerSpawn: {x:number;y:number}, enemySpawns: {x:number;y:number}[])
+
+
+Rules:
+         * Spawn player at playerSpawn
+         * Spawn up to GameConstants.ENEMY_COUNT enemies:
+         * Choose deterministic subset based on RNG:
+         * shuffle enemySpawns using rng
+         * take first N
+         * If there are fewer X markers than ENEMY_COUNT, spawn only those available.
+         * Enemy positions must be floor and not occupied (they will be from markers).
+Implement a small deterministic shuffle:
+private shuffleInPlace<T>(arr: T[]) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = this.rng.nextInt(0, i);
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+
+
+3) Render oxygen pickups and exit pod on the grid
+After drawGrid(), add simple markers:
+         * Exit pod: draw a rectangle or circle at exitPos (green-ish)
+         * Oxygen canisters: draw small circles at each oxygen pickup tile (blue-ish)
+Create and store these markers so they can be removed later, but for Day 1 they can be static.
+4) Add win condition stub: stepping on exit shows a text overlay
+In tryMove(player, dx, dy) after successful move:
+         * If actor is player and position == exitPos:
+         * display centered text: “ESCAPED (Victory stub) — press R”
+         * optionally freeze input by setting phase = "AI_BUSY" (or similar)
+No new scene yet; just a stub overlay.
+Success criteria
+         * Press F → always loads the same room id and layout for seed 12345
+         * Press R → changes seed and can change room/layout
+         * No interior randomness remains (no Math.random walls)
+         * Player spawns at P, exit at E, enemies at X markers
+         * Exit and oxygen canisters are visible markers
+         * Stepping on exit shows victory stub overlay
+________________
+
+
+Important note: Keep this as a pure Day 1 deterministic harness. Do not implement oxygen pickup collection yet; just render them.
+# Codex Prompt 3 (Day 2, Task 1)
+
+
+Copy-paste this into Codex exactly as written:
+
+
+---
+
+
+**Task: Day 2 — Combat System (Bump-to-Attack) + Death + Floating Damage Numbers**
+
+
+You now have a working grid with seeded rooms, player, enemies, and HUD. Now add combat: bump into an enemy to attack it, and show visual feedback.
+
+
+## 1) Add Actor stats to the Actor type
+
+
+In `RunScene.ts`, update the `Actor` type definition:
+
+
+```typescript
+type Actor = {
+  id: string;
+  kind: ActorKind;
+  x: number;
+  y: number;
+  rect: Phaser.GameObjects.Rectangle;
+  // NEW: combat stats
+  hp: number;
+  maxHp: number;
+  atk: number;
+};
+```
+
+
+## 2) Update `spawnActors()` to initialize stats
+
+
+When creating actors, add stats based on constants:
+
+
+```typescript
+// For player actor:
+const player: Actor = {
+  id: "player",
+  kind: "player",
+  x: playerSpawn.x,
+  y: playerSpawn.y,
+  rect: playerRect,
+  hp: GameConstants.PLAYER_HP,
+  maxHp: GameConstants.PLAYER_HP,
+  atk: GameConstants.PLAYER_ATK,
+};
+
+
+// For enemy actors:
+const enemy: Actor = {
+  id: `enemy-${i}`,
+  kind: "enemy",
+  x: spawnPos.x,
+  y: spawnPos.y,
+  rect: enemyRect,
+  hp: GameConstants.ENEMY_HP,
+  maxHp: GameConstants.ENEMY_HP,
+  atk: GameConstants.ENEMY_ATK,
+};
+```
+
+
+## 3) Create `applyCombat()` method
+
+
+Add this method to handle damage, death, and visual feedback:
+
+
+```typescript
+private applyCombat(attacker: Actor, target: Actor) {
+  // Deal damage
+  target.hp -= attacker.atk;
+
+
+  // Show floating damage number
+  this.showFloatingDamage(target.x, target.y, attacker.atk);
+
+
+  // Hit feedback: flash red
+  target.rect.setTint(0xff0000);
+  this.time.delayedCall(100, () => {
+    if (target.rect.active) {
+      target.rect.clearTint();
+    }
+  });
+
+
+  // Check death
+  if (target.hp <= 0) {
+    this.killActor(target);
+  }
+
+
+  // Update HUD if player was involved
+  if (attacker.kind === "player" || target.kind === "player") {
+    const player = this.actors.find(a => a.kind === "player");
+    if (player) {
+      this.playerHp = player.hp;
+      this.updateHUD();
+    }
+  }
+}
+```
+
+
+## 4) Create `showFloatingDamage()` method
+
+
+Add visual feedback for damage dealt:
+
+
+```typescript
+private showFloatingDamage(tileX: number, tileY: number, damage: number) {
+  const worldPos = this.tileToWorldCenter(tileX, tileY);
+  
+  const damageText = this.add.text(worldPos.x, worldPos.y, `-${damage}`, {
+    fontSize: "18px",
+    color: "#ff6b6b",
+    fontStyle: "bold",
+  }).setOrigin(0.5, 0.5);
+
+
+  // Animate: float up and fade out
+  this.tweens.add({
+    targets: damageText,
+    y: worldPos.y - 30,
+    alpha: 0,
+    duration: 800,
+    ease: "Cubic.easeOut",
+    onComplete: () => {
+      damageText.destroy();
+    }
+  });
+}
+```
+
+
+## 5) Create `killActor()` method
+
+
+Handle actor death with animation:
+
+
+```typescript
+private killActor(actor: Actor) {
+  // Death animation: red tint + scale down
+  actor.rect.setTint(0xff0000);
+  
+  this.tweens.add({
+    targets: actor.rect,
+    scaleX: 0,
+    scaleY: 0,
+    alpha: 0,
+    duration: 200,
+    ease: "Back.easeIn",
+    onComplete: () => {
+      // Remove from game
+      actor.rect.destroy();
+      
+      // Remove from occupancy
+      this.occupancy.delete(this.key(actor.x, actor.y));
+      
+      // Remove from actors array
+      const index = this.actors.findIndex(a => a.id === actor.id);
+      if (index !== -1) {
+        this.actors.splice(index, 1);
+      }
+
+
+      // Adjust turn queue if needed
+      if (this.turnIndex >= this.actors.length) {
+        this.turnIndex = 0;
+      }
+
+
+      // Check for player death
+      if (actor.kind === "player") {
+        this.handlePlayerDeath();
+      }
+    }
+  });
+}
+```
+
+
+## 6) Add `handlePlayerDeath()` stub
+
+
+```typescript
+private handlePlayerDeath() {
+  // Defeat stub for now
+  const { width, height } = this.scale;
+  
+  const defeatBg = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.8);
+  
+  const defeatText = this.add.text(width / 2, height / 2 - 40, "DEFEAT", {
+    fontSize: "48px",
+    color: "#ff6b6b",
+    fontStyle: "bold"
+  }).setOrigin(0.5);
+
+
+  const restartText = this.add.text(width / 2, height / 2 + 20, "Press R to restart", {
+    fontSize: "20px",
+    color: "#ffffff"
+  }).setOrigin(0.5);
+}
+```
+
+
+## 7) Update `tryMove()` to implement bump-to-attack
+
+
+Modify the existing `tryMove()` method to check for enemies and attack instead of failing:
+
+
+```typescript
+private tryMove(actor: Actor, dx: number, dy: number): boolean {
+  const nx = actor.x + dx;
+  const ny = actor.y + dy;
+
+
+  if (!this.inside(nx, ny)) return false;
+  if (this.isWall(nx, ny)) return false;
+
+
+  // Check for another actor at target position
+  const targetActor = this.actorAt(nx, ny);
+  
+  if (targetActor) {
+    // Can't move into same team
+    if (targetActor.kind === actor.kind) return false;
+    
+    // COMBAT: bump-to-attack
+    this.applyCombat(actor, targetActor);
+    return true; // attacking counts as using your turn
+  }
+
+
+  // Normal movement (no occupant)
+  this.occupancy.delete(this.key(actor.x, actor.y));
+  actor.x = nx;
+  actor.y = ny;
+  this.occupancy.set(this.key(actor.x, actor.y), actor.id);
+
+
+  // Move visuals
+  const p = this.tileToWorldCenter(actor.x, actor.y);
+  actor.rect.setPosition(p.x, p.y);
+
+
+  return true;
+}
+```
+
+
+## 8) Add enemy AI stub for combat testing
+
+
+Update `beginCurrentTurn()` to make enemies try to move toward player (simple chase):
+
+
+```typescript
+private beginCurrentTurn() {
+  const actor = this.actors[this.turnIndex];
+  
+  if (actor.kind === "player") {
+    this.phase = "PLAYER";
+    this.updateTurnText();
+    return;
+  }
+
+
+  // Simple enemy AI: move toward player
+  this.phase = "AI_BUSY";
+  this.updateTurnText();
+
+
+  const player = this.actors.find(a => a.kind === "player");
+  if (!player) {
+    this.endEnemyTurn();
+    return;
+  }
+
+
+  // Try to move closer (simple greedy approach)
+  const dx = Math.sign(player.x - actor.x);
+  const dy = Math.sign(player.y - actor.y);
+
+
+  // Try primary direction first
+  let moved = false;
+  if (dx !== 0 && this.tryMove(actor, dx, 0)) {
+    moved = true;
+  } else if (dy !== 0 && this.tryMove(actor, 0, dy)) {
+    moved = true;
+  }
+
+
+  // Small delay before next turn for clarity
+  this.time.delayedCall(300, () => {
+    this.endEnemyTurn();
+  });
+}
+
+
+private endEnemyTurn() {
+  this.turnIndex = (this.turnIndex + 1) % this.actors.length;
+  
+  if (this.turnIndex === 0) {
+    this.turnCount++;
+    this.updateHUD();
+  }
+  
+  this.beginCurrentTurn();
+}
+```
+
+
+## 9) Update `updateTurnText()` to show whose turn it is
+
+
+```typescript
+private updateTurnText() {
+  const actor = this.actors[this.turnIndex];
+  if (!actor) {
+    this.turnText.setText("");
+    return;
+  }
+
+
+  if (actor.kind === "player") {
+    this.turnText.setText("Your turn");
+  } else {
+    this.turnText.setText(`Enemy ${actor.id} turn`);
+  }
+}
+```
+
+
+## Success Criteria:
+- ✅ Move into enemy → player attacks, shows damage number, enemy flashes red
+- ✅ Enemy dies after enough hits (2 hits for PLAYER_ATK=3, ENEMY_HP=6)
+- ✅ Enemy moves toward player on its turn
+- ✅ Enemy attacks player when adjacent (bump-to-attack works both ways)
+- ✅ Player death shows "DEFEAT" overlay
+- ✅ Floating damage numbers appear and fade
+- ✅ Death animation (tint red, scale down) plays before removal
+- ✅ Turn text shows "Your turn" / "Enemy X turn"
+
+
+## Testing:
+1. Press F to load fixed seed
+2. Walk into an enemy → should see damage number, enemy HP decreases
+3. Kill an enemy → should see death animation
+4. Let enemies reach you → should take damage, see your HP decrease in HUD
+5. Die → should see DEFEAT screen
+
+
+---
+
+
+**Why this prompt works:**
+
+
+1. **Builds directly on Prompt 2's foundation** (rooms, spawns, HUD)
+2. **Complete combat loop** — attack, damage, death, feedback all in one prompt
+3. **Visual polish included** — floating damage, death animations, tints
+4. **Simple enemy AI** for immediate testing
+5. **Clear success criteria** so you know it's working
+
+
+After testing, you'll have enemies you can fight, feedback that feels good, and a working death state. Ready for Day 2 Task 2 (systems refactor) next.
+
+
+
+
+Codex Prompt 4 (Day 2, Task 2)
+ Copy-paste this into Codex exactly as written:
+________________
+
+
+Task: Day 2 — Refactor into Systems (GridSystem + TurnSystem + CombatSystem) with ZERO gameplay changes
+You already implemented deterministic rooms + seeded RNG + HUD/restart + bump-to-attack combat (Prompt 1–3).
+Now refactor RunScene.ts so it stays readable and Codex edits don’t break unrelated logic.
+✅ Hard rule: This is a pure refactor. After the change, the game must behave the same:
+         * Fixed seed still loads same room
+         * Move + walls still work
+         * Bump-to-attack still works both ways
+         * Damage numbers + death animation still work
+         * Defeat overlay still shows on player death
+         * Restart keys (R/F) still work
+________________
+
+
+1) Create src/game/models/Actor.ts
+import Phaser from "phaser";
+import { GameConstants } from "../constants";
+
+
+export type ActorKind = "player" | "enemy";
+
+
+export type Actor = {
+  id: string;
+  kind: ActorKind;
+  x: number;
+  y: number;
+  rect: Phaser.GameObjects.Rectangle;
+  hp: number;
+  maxHp: number;
+  atk: number;
+};
+
+
+export function createPlayerActor(
+  scene: Phaser.Scene,
+  x: number,
+  y: number,
+  worldX: number,
+  worldY: number
+): Actor {
+  const rect = scene.add
+    .rectangle(worldX, worldY, GameConstants.TILE_SIZE * 0.72, GameConstants.TILE_SIZE * 0.72, 0x52d6ff)
+    .setStrokeStyle(2, 0x0b0f14);
+
+
+  return {
+    id: "player",
+    kind: "player",
+    x,
+    y,
+    rect,
+    hp: GameConstants.PLAYER_HP,
+    maxHp: GameConstants.PLAYER_HP,
+    atk: GameConstants.PLAYER_ATK,
+  };
+}
+
+
+export function createEnemyActor(
+  scene: Phaser.Scene,
+  id: string,
+  x: number,
+  y: number,
+  worldX: number,
+  worldY: number
+): Actor {
+  const rect = scene.add
+    .rectangle(worldX, worldY, GameConstants.TILE_SIZE * 0.72, GameConstants.TILE_SIZE * 0.72, 0xff5c7a)
+    .setStrokeStyle(2, 0x0b0f14);
+
+
+  return {
+    id,
+    kind: "enemy",
+    x,
+    y,
+    rect,
+    hp: GameConstants.ENEMY_HP,
+    maxHp: GameConstants.ENEMY_HP,
+    atk: GameConstants.ENEMY_ATK,
+  };
+}
+
+
+________________
+
+
+2) Create src/game/systems/GridSystem.ts
+This system owns: tiles, occupancy, basic grid queries.
+import { GameConstants } from "../constants";
+
+
+export type Tile = 0 | 1;
+
+
+export class GridSystem {
+  readonly w = GameConstants.GRID_WIDTH;
+  readonly h = GameConstants.GRID_HEIGHT;
+
+
+  tiles: Tile[] = new Array(this.w * this.h).fill(0);
+  occupancy = new Map<string, string>(); // "x,y" => actorId
+
+
+  idx(x: number, y: number) {
+    return y * this.w + x;
+  }
+
+
+  key(x: number, y: number) {
+    return `${x},${y}`;
+  }
+
+
+  inside(x: number, y: number) {
+    return x >= 0 && y >= 0 && x < this.w && y < this.h;
+  }
+
+
+  isWall(x: number, y: number) {
+    if (!this.inside(x, y)) return true;
+    return this.tiles[this.idx(x, y)] === 1;
+  }
+
+
+  setTiles(tiles: Tile[]) {
+    if (tiles.length !== this.w * this.h) {
+      throw new Error("GridSystem.setTiles: invalid tiles length");
+    }
+    this.tiles = tiles;
+  }
+
+
+  clearOccupancy() {
+    this.occupancy.clear();
+  }
+
+
+  actorIdAt(x: number, y: number): string | undefined {
+    return this.occupancy.get(this.key(x, y));
+  }
+
+
+  setActorAt(x: number, y: number, actorId: string) {
+    this.occupancy.set(this.key(x, y), actorId);
+  }
+
+
+  clearActorAt(x: number, y: number) {
+    this.occupancy.delete(this.key(x, y));
+  }
+
+
+  moveActor(actorId: string, fromX: number, fromY: number, toX: number, toY: number) {
+    this.clearActorAt(fromX, fromY);
+    this.setActorAt(toX, toY, actorId);
+  }
+}
+
+
+________________
+
+
+3) Create src/game/systems/TurnSystem.ts
+This system owns: actor list + turn index + phase.
+import type { Actor } from "../models/Actor";
+
+
+export type TurnPhase = "PLAYER" | "AI_BUSY";
+
+
+export class TurnSystem {
+  actors: Actor[] = [];
+  turnIndex = 0;
+  phase: TurnPhase = "PLAYER";
+
+
+  reset(actors: Actor[]) {
+    this.actors = actors;
+    this.turnIndex = 0;
+    this.phase = "PLAYER";
+  }
+
+
+  current(): Actor | undefined {
+    return this.actors[this.turnIndex];
+  }
+
+
+  getById(id: string): Actor | undefined {
+    return this.actors.find(a => a.id === id);
+  }
+
+
+  next() {
+    if (this.actors.length === 0) {
+      this.turnIndex = 0;
+      return;
+    }
+    this.turnIndex = (this.turnIndex + 1) % this.actors.length;
+  }
+
+
+  removeActor(actorId: string) {
+    const idx = this.actors.findIndex(a => a.id === actorId);
+    if (idx === -1) return;
+
+
+    this.actors.splice(idx, 1);
+
+
+    // Clamp turnIndex so it never points out of range
+    if (this.actors.length === 0) {
+      this.turnIndex = 0;
+      return;
+    }
+    if (this.turnIndex >= this.actors.length) {
+      this.turnIndex = 0;
+    }
+  }
+}
+
+
+________________
+
+
+4) Create src/game/systems/CombatSystem.ts
+This system owns: damage, hit feedback, floating numbers, death animation + clean removal from grid/turn.
+import Phaser from "phaser";
+import type { Actor } from "../models/Actor";
+import { GridSystem } from "./GridSystem";
+import { TurnSystem } from "./TurnSystem";
+
+
+export class CombatSystem {
+  constructor(
+    private scene: Phaser.Scene,
+    private grid: GridSystem,
+    private turn: TurnSystem,
+    private tileToWorldCenter: (x: number, y: number) => { x: number; y: number },
+    private onPlayerDeath: () => void,
+    private onAnyHpChanged: () => void
+  ) {}
+
+
+  attack(attacker: Actor, target: Actor) {
+    target.hp -= attacker.atk;
+
+
+    this.showFloatingDamage(target.x, target.y, attacker.atk);
+
+
+    // flash red
+    target.rect.setTint(0xff0000);
+    this.scene.time.delayedCall(100, () => {
+      if (target.rect.active) target.rect.clearTint();
+    });
+
+
+    this.onAnyHpChanged();
+
+
+    if (target.hp <= 0) {
+      this.kill(target);
+    }
+  }
+
+
+  private showFloatingDamage(tileX: number, tileY: number, damage: number) {
+    const worldPos = this.tileToWorldCenter(tileX, tileY);
+
+
+    const damageText = this.scene.add
+      .text(worldPos.x, worldPos.y, `-${damage}`, {
+        fontSize: "18px",
+        color: "#ff6b6b",
+        fontStyle: "bold",
+      })
+      .setOrigin(0.5, 0.5);
+
+
+    this.scene.tweens.add({
+      targets: damageText,
+      y: worldPos.y - 30,
+      alpha: 0,
+      duration: 800,
+      ease: "Cubic.easeOut",
+      onComplete: () => damageText.destroy(),
+    });
+  }
+
+
+  private kill(actor: Actor) {
+    actor.rect.setTint(0xff0000);
+
+
+    this.scene.tweens.add({
+      targets: actor.rect,
+      scaleX: 0,
+      scaleY: 0,
+      alpha: 0,
+      duration: 200,
+      ease: "Back.easeIn",
+      onComplete: () => {
+        actor.rect.destroy();
+
+
+        this.grid.clearActorAt(actor.x, actor.y);
+        this.turn.removeActor(actor.id);
+
+
+        if (actor.kind === "player") {
+          this.onPlayerDeath();
+        }
+      },
+    });
+  }
+}
+
+
+________________
+
+
+5) Update RunScene.ts to use these systems (remove duplicated state)
+A) Add imports at top
+import Phaser from "phaser";
+import { SceneKeys } from "../SceneKeys";
+import { GameConstants } from "../constants";
+import { SeededRNG } from "../utils/SeededRNG";
+import { Rooms, RoomTileChar } from "../content/rooms";
+import { GridSystem, Tile } from "../systems/GridSystem";
+import { TurnSystem } from "../systems/TurnSystem";
+import { CombatSystem } from "../systems/CombatSystem";
+import { Actor, createEnemyActor, createPlayerActor } from "../models/Actor";
+
+
+B) Create new fields and DELETE old duplicates
+In RunScene, you MUST:
+         * DELETE: tiles, occupancy, actors, idx, key, inside, isWall fields/methods (since GridSystem owns them)
+         * ADD these fields:
+private grid = new GridSystem();
+private turn = new TurnSystem();
+private combat!: CombatSystem;
+
+
+// Keep these from Prompt 1:
+private seed!: number;
+private rng!: SeededRNG;
+private oxygen: number = GameConstants.OXYGEN_START;
+private turnCount: number = 0;
+
+
+// Room/markers you already added:
+private exitPos!: { x: number; y: number };
+private oxygenPickups = new Set<string>();
+
+
+// Rendering/layout
+private originX = 0;
+private originY = 0;
+private gridGfx!: Phaser.GameObjects.Graphics;
+
+
+// HUD elements from Prompt 1:
+private hpText!: Phaser.GameObjects.Text;
+private oxygenText!: Phaser.GameObjects.Text;
+private turnCountText!: Phaser.GameObjects.Text;
+private seedText!: Phaser.GameObjects.Text;
+private helpText!: Phaser.GameObjects.Text;
+private turnText!: Phaser.GameObjects.Text;
+
+
+C) Update helper methods to use GridSystem
+Replace any calls like this.idx(...) → this.grid.idx(...), same for key, inside, isWall.
+You will still keep tileToWorldCenter in RunScene because it depends on originX/originY/tileSize.
+D) In create(), after originX/originY and before input handlers, instantiate CombatSystem
+Add:
+this.combat = new CombatSystem(
+  this,
+  this.grid,
+  this.turn,
+  (x, y) => this.tileToWorldCenter(x, y),
+  () => this.handlePlayerDeath(),
+  () => this.updateHUD()
+);
+
+
+E) Update updateHUD() to use player actor HP (remove playerHp mirror)
+Ensure HUD uses the player actor from TurnSystem:
+private updateHUD() {
+  const player = this.turn.getById("player");
+  const hpNow = player ? player.hp : 0;
+  const hpMax = player ? player.maxHp : GameConstants.PLAYER_HP;
+
+
+  this.hpText.setText(`HP: ${hpNow}/${hpMax}`);
+  this.oxygenText.setText(`O₂: ${this.oxygen}/${GameConstants.OXYGEN_START}`);
+  this.turnCountText.setText(`Turn: ${this.turnCount}`);
+  this.seedText.setText(`Seed: ${this.seed}`);
+}
+
+
+F) Update spawnActors(playerSpawn, enemySpawns) to return an Actor[] and then call this.turn.reset(actors)
+Implement this logic:
+         * Clear grid occupancy
+         * Create player actor and enemies with factory functions
+         * Set occupancy via this.grid.setActorAt(x,y,id)
+         * Build actors: Actor[]
+         * Call this.turn.reset(actors)
+Key detail: enemy count must still obey GameConstants.ENEMY_COUNT and use deterministic shuffle with this.rng (you already had shuffle method in Prompt 2; keep it in RunScene or move it—either is fine).
+G) Update actorAt(x,y) to use grid + turn
+Add:
+private actorAt(x: number, y: number): Actor | undefined {
+  const id = this.grid.actorIdAt(x, y);
+  if (!id) return undefined;
+  return this.turn.getById(id);
+}
+
+
+H) Update tryMove() to use grid + combat
+Replace body with:
+private tryMove(actor: Actor, dx: number, dy: number): boolean {
+  const nx = actor.x + dx;
+  const ny = actor.y + dy;
+
+
+  if (!this.grid.inside(nx, ny)) return false;
+  if (this.grid.isWall(nx, ny)) return false;
+
+
+  const target = this.actorAt(nx, ny);
+  if (target) {
+    if (target.kind === actor.kind) return false;
+    this.combat.attack(actor, target);
+    return true; // attack consumes turn
+  }
+
+
+  // movement
+  this.grid.moveActor(actor.id, actor.x, actor.y, nx, ny);
+  actor.x = nx;
+  actor.y = ny;
+
+
+  const p = this.tileToWorldCenter(actor.x, actor.y);
+  actor.rect.setPosition(p.x, p.y);
+
+
+  return true;
+}
+
+
+I) Ensure turn flow still works
+Your existing player input should still call tryMove(player, dx, dy) then endPlayerTurn().
+Update beginCurrentTurn() to read from this.turn.current() and advance via this.turn.next().
+Where you previously did:
+         * this.turnIndex = ...
+         * this.actors[...]
+…you now do:
+         * const actor = this.turn.current()
+         * this.turn.next()
+Example enemy end turn:
+private endEnemyTurn() {
+  this.turn.next();
+  this.beginCurrentTurn();
+}
+
+
+Keep your existing delayed call for enemy AI so it stays readable.
+J) Update updateTurnText() to reference current actor from TurnSystem
+private updateTurnText() {
+  const actor = this.turn.current();
+  if (!actor) {
+    this.turnText.setText("");
+    return;
+  }
+  this.turnText.setText(actor.kind === "player" ? "Your turn" : `Enemy ${actor.id} turn`);
+}
+
+
+________________
+
+
+6) Create src/game/systems/index.ts (nice-to-have)
+export * from "./GridSystem";
+export * from "./TurnSystem";
+export * from "./CombatSystem";
+
+
+(If you add this, update imports accordingly; otherwise skip.)
+________________
+
+
+Success Criteria (must all pass)
+         1. npm run dev builds with no TS errors
+         2. Press F → same room + spawns as before
+         3. Player movement + walls identical
+         4. Bump-to-attack identical: damage numbers, flash, death tween
+         5. Player death still shows defeat overlay
+         6. No duplicated occupancy/tiles/actors logic remains inside RunScene (systems now own them)
+________________
+
+
+Finish by doing a quick self-check: Search RunScene.ts for new Map(, tiles =, actors = — those should be gone except where you intentionally keep marker sets or UI objects.
+---
+Almost! Your settings file has a syntax error. You have two separate JSON objects { } when you need one merged object.
+Here's the corrected version:
+________________
+
+
+Fixed settings.json
+Replace your entire settings.json with this:
+{
+    "python.analysis.typeCheckingMode": "basic",
+    "git.enableSmartCommit": true,
+    "explorer.confirmDragAndDrop": false,
+    "files.autoSave": "afterDelay",
+    "files.autoSaveDelay": 200,
+    "emeraldwalk.runonsave": {
+        "autoClearConsole": true,
+        "commands": [
+            { "match": ".*", "isAsync": true, "cmd": "npm run dev || true" },
+            { "match": ".*", "isAsync": true, "cmd": "npm run build || true" },
+            { "match": ".*", "isAsync": true, "cmd": "npm run lint || true" },
+            { "match": ".*", "isAsync": true, "cmd": "npm run test || true" },
+            { "match": ".*", "isAsync": true, "cmd": "npm run type-check || true" },
+            { "match": ".*", "isAsync": true, "cmd": "npm run format || true" },
+            { "match": ".*", "isAsync": true, "cmd": "pnpm dev || yarn dev || true" },
+            { "match": "\\.py$", "isAsync": true, "cmd": "python -u \"${file}\" || true" },
+            { "match": "\\.(js|ts|tsx|jsx)$", "isAsync": true, "cmd": "node \"${file}\" || tsx \"${file}\" || true" },
+            { "match": ".*", "isAsync": true, "cmd": "pdm sync || true" },
+            { "match": ".*", "isAsync": true, "cmd": "echo 'FILE SAVED → TOTAL SYSTEM REBUILD' && date" }
+        ]
+    },
+    "chat.tools.terminal.autoApprove": {
+        "/.*/": true
+    },
+    "chat.tools.global.autoApprove": true,
+    "chat.tools.edits.autoApprove": { "/.*/": true },
+    "terminal.integrated.commandsToSkipShell": [
+        "*", "py", "pdm", "python", "npm", "pnpm", "yarn", "git", "node", "npx"
+    ],
+    "security.workspace.trust.untrustedFiles": "open",
+    "chat.commandCenter.enabled": true,
+    "liveServer.settings.donotShowInfoMsg": true,
+    "redhat.telemetry.enabled": true,
+    "security.allowedUNCHosts": [
+        "wsl.localhost"
+    ],
+    "chatgpt.runCodexInWindowsSubsystemForLinux": true
+}
+
+
+________________
+
+
+Key fix:
+         * ❌ Wrong: Two separate { } objects
+         * ✅ Right: One { } object with all settings inside, comma-separated
+________________
+
+
+⚠️ Important warning about your emeraldwalk.runonsave settings
+Those "run everything on every save" commands will absolutely destroy your system performance. Every time you save a file, it will try to:
+         * Start 2-3 dev servers simultaneously
+         * Run builds, tests, linters
+         * Execute random files
+For this roguelike project, comment out or remove the entire emeraldwalk.runonsave section. You only need:
+         1. Manual npm run dev in the terminal (which you keep running)
+         2. Auto-save (which you already have)
+________________
+
+
+Recommended minimal settings for this project:
+{
+    "python.analysis.typeCheckingMode": "basic",
+    "git.enableSmartCommit": true,
+    "explorer.confirmDragAndDrop": false,
+    "files.autoSave": "afterDelay",
+    "files.autoSaveDelay": 1000,
+    "security.workspace.trust.untrustedFiles": "open",
+    "security.allowedUNCHosts": [
+        "wsl.localhost"
+    ],
+    "chatgpt.runCodexInWindowsSubsystemForLinux": true
+}
+
+
+This gives you:
+         * Auto-save after 1 second
+         * WSL + Codex working
+         * No performance-killing auto-commands
+________________
+
+
+Save the corrected settings, then continue with Step 4 (creating the project structure). Let me know once you've got the folders created! 🚀

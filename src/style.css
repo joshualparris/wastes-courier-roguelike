@@ -1,0 +1,12 @@
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: #0b0f14;
+  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+  color: #ffffff;
+}
+
+#app {
+  height: 100%;
+}

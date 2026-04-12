@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { TitleScene } from "./scenes/TitleScene";
 import { OverworldScene } from "./scenes/OverworldScene";
 import { RunScene } from "./scenes/RunScene";
 import { MuseumScene } from "./scenes/MuseumScene";
@@ -8,7 +9,7 @@ export function createGame(parent: string) {
     type: Phaser.AUTO,
     parent,
     backgroundColor: "#0b0f14",
-    scene: [OverworldScene, RunScene, MuseumScene],
+    scene: [TitleScene, OverworldScene, RunScene, MuseumScene],
     scale: {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH,

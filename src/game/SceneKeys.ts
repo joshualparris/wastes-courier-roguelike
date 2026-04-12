@@ -1,4 +1,5 @@
 export const SceneKeys = {
+  Title: "Title",
   Overworld: "Overworld",
   Run: "Run",
   Museum: "Museum",

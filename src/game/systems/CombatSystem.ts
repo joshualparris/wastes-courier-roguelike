@@ -10,6 +10,7 @@ export class CombatSystem {
   private tileToWorldCenter: (x: number, y: number) => { x: number; y: number };
   private onPlayerDeath: () => void;
   private onAnyHpChanged: () => void;
+  private onCombatEvent?: (attacker: Actor, target: Actor, damage: number, killed: boolean) => void;
 
   constructor(
     scene: Phaser.Scene,
@@ -17,7 +18,8 @@ export class CombatSystem {
     turn: TurnSystem,
     tileToWorldCenter: (x: number, y: number) => { x: number; y: number },
     onPlayerDeath: () => void,
-    onAnyHpChanged: () => void
+    onAnyHpChanged: () => void,
+    onCombatEvent?: (attacker: Actor, target: Actor, damage: number, killed: boolean) => void
   ) {
     this.scene = scene;
     this.grid = grid;
@@ -25,6 +27,7 @@ export class CombatSystem {
     this.tileToWorldCenter = tileToWorldCenter;
     this.onPlayerDeath = onPlayerDeath;
     this.onAnyHpChanged = onAnyHpChanged;
+    this.onCombatEvent = onCombatEvent;
   }
 
   attack(attacker: Actor, target: Actor) {
@@ -39,9 +42,11 @@ export class CombatSystem {
       }
     });
 
+    const killed = target.hp <= 0;
+    this.onCombatEvent?.(attacker, target, attacker.atk, killed);
     this.onAnyHpChanged();
 
-    if (target.hp <= 0) {
+    if (killed) {
       this.kill(target);
     }
   }

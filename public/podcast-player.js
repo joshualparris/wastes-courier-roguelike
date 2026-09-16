@@ -31,6 +31,7 @@
   let current = 0;
   let open = false;
   let visible = true;
+  let hasLoadedEpisode = false;
 
   try {
     const saved = JSON.parse(localStorage.getItem(STATE_KEY) || '{}');
@@ -54,62 +55,90 @@
     #wc-podcast-root{position:relative;z-index:2147483000;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
     #wc-podcast-launcher{position:fixed;left:50%;bottom:max(10px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:2147483000;border:1px solid #2d6a7d;border-radius:999px;background:#0b0f14;color:#52d6ff;padding:10px 16px;font:700 13px/1.2 ui-monospace,monospace;box-shadow:0 10px 30px rgba(0,0,0,.55);cursor:pointer;touch-action:manipulation}
     #wc-podcast-restore{position:fixed;right:8px;bottom:max(8px,env(safe-area-inset-bottom));z-index:2147483000;width:34px;height:34px;border:1px solid #244452;border-radius:9px;background:rgba(11,15,20,.72);color:#52d6ff;font-size:16px;opacity:.42;cursor:pointer;touch-action:manipulation}
-    #wc-podcast-panel{position:fixed;left:50%;bottom:max(6px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:2147483000;width:min(620px,calc(100vw - 14px));box-sizing:border-box;border:1px solid #2d6a7d;border-radius:14px;background:#091017;color:#dbe8ef;padding:12px;box-shadow:0 16px 48px rgba(0,0,0,.7)}
+    #wc-podcast-panel{position:fixed;left:50%;bottom:max(6px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:2147483000;width:min(620px,calc(100vw - 14px));box-sizing:border-box;border:1px solid #2d6a7d;border-radius:14px;background:#091017;color:#dbe8ef;padding:12px;box-shadow:0 16px 48px rgba(0,0,0,.7);transition:opacity .16s ease,transform .16s ease,visibility .16s ease}
+    #wc-podcast-panel.wc-collapsed{visibility:hidden;opacity:0;pointer-events:none;transform:translate(-50%,calc(100% + 36px))}
     .wc-head{display:flex;gap:10px;justify-content:space-between;align-items:flex-start}.wc-kicker{color:#52d6ff;font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase}.wc-title{font-size:15px;line-height:1.3;margin:4px 0;color:#fff}.wc-meta{font-size:11px;color:#93aeb9;margin:4px 0 0}.wc-close{width:38px;height:38px;border-radius:9px;border:1px solid #294a57;background:#111a22;color:#fff;font-size:21px;cursor:pointer}.wc-frame{width:100%;height:152px;border:0;border-radius:10px;background:#030507;margin-top:10px}.wc-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}.wc-actions button,.wc-actions a{border-radius:9px;padding:9px 11px;font:700 12px/1.2 ui-monospace,monospace;text-decoration:none;cursor:pointer}.wc-next{border:0;background:#176a83;color:white}.wc-open{display:inline-flex;align-items:center;border:1px solid #31515e;background:#14202a;color:#dbe8ef}.wc-hide{border:1px solid #31515e;background:transparent;color:#91a7b1}.wc-note{font-size:10px;color:#70858f;margin:8px 0 0}
+    [hidden]{display:none!important}
     @media(max-width:640px){#wc-podcast-panel{width:calc(100vw - 8px);padding:10px}.wc-actions>*{flex:1;justify-content:center;text-align:center}}
   `;
   document.head.appendChild(style);
 
   const root = document.createElement('div');
   root.id = 'wc-podcast-root';
+  root.innerHTML = `
+    <button id="wc-podcast-launcher" type="button" aria-label="Open Wastes Courier podcasts">🎧 Podcasts</button>
+    <button id="wc-podcast-restore" type="button" aria-label="Show podcasts" title="Show podcasts">🎧</button>
+    <aside id="wc-podcast-panel" class="wc-collapsed" aria-label="Wastes Courier podcast player" aria-hidden="true">
+      <div class="wc-head"><div><div class="wc-kicker">Wastes Courier · roguelikes / game dev</div><h2 class="wc-title"></h2><p class="wc-meta"></p></div><button class="wc-close" type="button" aria-label="Close podcast controls">×</button></div>
+      <iframe class="wc-frame" title="Spotify podcast episode" loading="lazy" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>
+      <div class="wc-actions"><button class="wc-next" type="button">🎲 Different podcast</button><a class="wc-open" target="_blank" rel="noopener noreferrer">Open in Spotify ↗</a><button class="wc-hide" type="button">Hide podcasts</button></div>
+      <p class="wc-note">Closing this panel keeps the current episode playing. Hiding podcasts only hides the controls; use the Spotify player to pause audio.</p>
+    </aside>`;
   document.body.appendChild(root);
+
+  const launcher = root.querySelector('#wc-podcast-launcher');
+  const restore = root.querySelector('#wc-podcast-restore');
+  const panel = root.querySelector('#wc-podcast-panel');
+  const title = root.querySelector('.wc-title');
+  const meta = root.querySelector('.wc-meta');
+  const frame = root.querySelector('.wc-frame');
+  const spotifyLink = root.querySelector('.wc-open');
+
+  function loadCurrentEpisode(force = false) {
+    const episode = episodes[current];
+    title.textContent = episode.title;
+    meta.textContent = `${episode.show} · ${episode.tags.join(' · ')}`;
+    spotifyLink.href = `https://open.spotify.com/episode/${encodeURIComponent(episode.id)}`;
+
+    if (force || frame.dataset.episodeId !== episode.id) {
+      frame.src = `https://open.spotify.com/embed/episode/${encodeURIComponent(episode.id)}?theme=0`;
+      frame.dataset.episodeId = episode.id;
+      frame.title = `Spotify episode: ${episode.title}`;
+      hasLoadedEpisode = true;
+    }
+  }
+
+  function syncUi() {
+    launcher.hidden = !visible || open;
+    restore.hidden = visible;
+    panel.classList.toggle('wc-collapsed', !visible || !open);
+    panel.setAttribute('aria-hidden', (!visible || !open) ? 'true' : 'false');
+  }
 
   function setVisible(next) {
     visible = !!next;
     if (!visible) open = false;
     persist();
-    render();
+    syncUi();
   }
 
-  function render() {
-    if (!visible) {
-      root.innerHTML = '<button id="wc-podcast-restore" type="button" aria-label="Show podcasts" title="Show podcasts">🎧</button>';
-      root.querySelector('#wc-podcast-restore').addEventListener('click', () => setVisible(true));
-      return;
-    }
+  launcher.addEventListener('click', () => {
+    if (!hasLoadedEpisode) loadCurrentEpisode();
+    open = true;
+    syncUi();
+  });
 
-    if (!open) {
-      root.innerHTML = '<button id="wc-podcast-launcher" type="button" aria-label="Open Wastes Courier podcasts">🎧 Podcasts</button>';
-      root.querySelector('#wc-podcast-launcher').addEventListener('click', () => { open = true; render(); });
-      return;
-    }
+  restore.addEventListener('click', () => setVisible(true));
 
-    const episode = episodes[current];
-    root.innerHTML = `
-      <aside id="wc-podcast-panel" aria-label="Wastes Courier podcast player">
-        <div class="wc-head"><div><div class="wc-kicker">Wastes Courier · roguelikes / game dev</div><h2 class="wc-title"></h2><p class="wc-meta"></p></div><button class="wc-close" type="button" aria-label="Close podcast player">×</button></div>
-        <iframe class="wc-frame" title="Spotify podcast episode" loading="lazy" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>
-        <div class="wc-actions"><button class="wc-next" type="button">🎲 Different podcast</button><a class="wc-open" target="_blank" rel="noopener noreferrer">Open in Spotify ↗</a><button class="wc-hide" type="button">Hide podcasts</button></div>
-        <p class="wc-note">25 verified English episodes about roguelikes, procedural generation, indie development, level design and game systems. Hiding leaves only a faint 🎧 restore tab.</p>
-      </aside>`;
+  root.querySelector('.wc-close').addEventListener('click', () => {
+    open = false;
+    syncUi();
+  });
 
-    root.querySelector('.wc-title').textContent = episode.title;
-    root.querySelector('.wc-meta').textContent = `${episode.show} · ${episode.tags.join(' · ')}`;
-    const frame = root.querySelector('.wc-frame');
-    frame.src = `https://open.spotify.com/embed/episode/${encodeURIComponent(episode.id)}?theme=0`;
-    frame.title = `Spotify episode: ${episode.title}`;
-    root.querySelector('.wc-open').href = `https://open.spotify.com/episode/${encodeURIComponent(episode.id)}`;
-    root.querySelector('.wc-close').addEventListener('click', () => { open = false; render(); });
-    root.querySelector('.wc-next').addEventListener('click', () => { current = pickDifferent(); persist(); render(); });
-    root.querySelector('.wc-hide').addEventListener('click', () => setVisible(false));
-  }
+  root.querySelector('.wc-next').addEventListener('click', () => {
+    current = pickDifferent();
+    persist();
+    loadCurrentEpisode(true);
+  });
+
+  root.querySelector('.wc-hide').addEventListener('click', () => setVisible(false));
 
   function yieldToGameAudio() {
     if (!open) return;
     open = false;
-    render();
+    syncUi();
   }
 
   document.addEventListener('play', yieldToGameAudio, true);
-  render();
+  syncUi();
 })();
